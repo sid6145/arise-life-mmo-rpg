@@ -1,0 +1,408 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Design.md Section 1.1 Core Surfaces & Lines */
+  --color-bg-void: #07050a;
+  --color-bg-panel-900: #120608;
+  --color-bg-panel-800: #1a0a0d;
+  --color-bg-panel-glass: rgba(15, 5, 8, 0.9);
+  --color-hud-hairline: #ff003c;
+  --color-border-subtle: #2a1418;
+  --color-border-bracket: #ff3b5c;
+
+  /* Section 1.2 Accent Palette */
+  --color-accent-cyber-red: #ff003c;
+  --color-accent-cyber-cyan: #00f6ff;
+  --color-accent-eddie-gold: #ffd84a;
+  --color-accent-street-green: #3cff9e;
+  --color-accent-danger-orange: #ff8a3d;
+  --gradient-xp-fill: linear-gradient(90deg, #00f6ff 0%, #ffd84a 100%);
+
+  /* Section 8.1 Easing & Timing Custom Properties */
+  --ease-slow-build: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-snap-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-reward-burst: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-glitch-pulse: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Typography variables */
+  --font-orbitron: 'Orbitron', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-chakra: 'Chakra Petch', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+html, body {
+  background-color: var(--color-bg-void);
+  color: #e2e8f0;
+  min-height: 100vh;
+  font-family: var(--font-chakra);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Universal press/tap zero-latency scale feedback */
+.touch-press {
+  transition: transform 0.1s var(--ease-snap-bounce);
+  will-change: transform;
+}
+.touch-press:active {
+  transform: scale(0.96);
+}
+
+/* Design.md Section 1.4: 4-Corner Bracket Frame System */
+.hud-corner-brackets {
+  position: relative;
+}
+
+.hud-corner-brackets::before,
+.hud-corner-brackets::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Top-Left & Top-Right brackets */
+.hud-corner-brackets::before {
+  top: -2px;
+  left: -2px;
+  border-top: 2px solid var(--color-border-bracket);
+  border-left: 2px solid var(--color-border-bracket);
+  box-shadow: -1px -1px 6px rgba(255, 59, 92, 0.4);
+}
+
+.hud-corner-brackets::after {
+  top: -2px;
+  right: -2px;
+  border-top: 2px solid var(--color-border-bracket);
+  border-right: 2px solid var(--color-border-bracket);
+  box-shadow: 1px -1px 6px rgba(255, 59, 92, 0.4);
+}
+
+/* Bottom brackets container helper */
+.hud-corner-brackets-bottom::before,
+.hud-corner-brackets-bottom::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.hud-corner-brackets-bottom::before {
+  bottom: -2px;
+  left: -2px;
+  border-bottom: 2px solid var(--color-border-bracket);
+  border-left: 2px solid var(--color-border-bracket);
+  box-shadow: -1px 1px 6px rgba(255, 59, 92, 0.4);
+}
+
+.hud-corner-brackets-bottom::after {
+  bottom: -2px;
+  right: -2px;
+  border-bottom: 2px solid var(--color-border-bracket);
+  border-right: 2px solid var(--color-border-bracket);
+  box-shadow: 1px 1px 6px rgba(255, 59, 92, 0.4);
+}
+
+/* Section 1.4: Asymmetric single-corner cut for primary buttons */
+.clip-cyber-asym {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+}
+
+.clip-cyber-btn {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+}
+
+.clip-cyber-tag {
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+/* Section 1.5 Scanlines & Atmospheric Noise */
+.hud-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.25) 0px,
+    rgba(0, 0, 0, 0.25) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  background-size: 100% 3px;
+}
+
+.hud-tech-grid {
+  background-size: 28px 28px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 0, 60, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 0, 60, 0.04) 1px, transparent 1px);
+}
+
+/* Section 8.2: Chromatic Split Glitch Flash on button confirm */
+@keyframes chromatic-split {
+  0% {
+    transform: translate(0);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  30% {
+    transform: translate(-3px, 1px);
+    filter: drop-shadow(3px 0 0 #ff003c) drop-shadow(-3px 0 0 #00f6ff);
+  }
+  60% {
+    transform: translate(2px, -1px);
+    filter: drop-shadow(-2px 0 0 #ff003c) drop-shadow(2px 0 0 #00f6ff);
+  }
+  100% {
+    transform: translate(0);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+.animate-glitch-confirm {
+  animation: chromatic-split 0.12s ease-in-out;
+}
+
+/* Screen level scale pulse */
+@keyframes screen-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+
+.animate-screen-pulse {
+  animation: screen-pulse 0.6s var(--ease-glitch-pulse) forwards;
+}
+
+/* Pulse on active hero elements */
+@keyframes ambient-pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 0, 60, 0.55);
+  }
+}
+
+.animate-ambient-hero {
+  animation: ambient-pulse-red 4s ease-in-out infinite;
+}
+
+/* Shimmer on locked content */
+@keyframes locked-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-shimmer {
+  animation: locked-shimmer 3s ease-in-out infinite;
+}
+
+/* Netrunner HUD Skeleton Pulse Animation */
+@keyframes hud-skeleton-breathe {
+  0%, 100% {
+    opacity: 0.35;
+    border-color: rgba(255, 0, 60, 0.15);
+  }
+  50% {
+    opacity: 0.75;
+    border-color: rgba(0, 246, 255, 0.35);
+  }
+}
+
+.animate-hud-skeleton {
+  animation: hud-skeleton-breathe 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes hud-scan-sweep {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(300%); }
+}
+
+.animate-hud-sweep {
+  animation: hud-scan-sweep 2.2s linear infinite;
+}
+
+/* Section 13: Login / Auth Screen Keyframes */
+@keyframes hud-panel-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-hud-enter {
+  animation: hud-panel-enter 0.28s var(--ease-snap-bounce) forwards;
+}
+
+@keyframes error-pulse-flash {
+  0% {
+    border-color: #ff003c;
+    box-shadow: 0 0 20px rgba(255, 0, 60, 0.6);
+    background-color: rgba(255, 0, 60, 0.15);
+  }
+  100% {
+    border-color: var(--color-border-subtle);
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+
+.animate-error-pulse {
+  animation: error-pulse-flash 0.15s ease-out forwards;
+}
+
+@keyframes single-frame-glitch {
+  0% {
+    transform: translate(0);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    transform: translate(-3px, 1px);
+    filter: drop-shadow(3px 0 0 #ff003c) drop-shadow(-3px 0 0 #00f6ff);
+  }
+  100% {
+    transform: translate(0);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+.animate-single-glitch {
+  animation: single-frame-glitch 0.06s ease-in-out forwards;
+}
+
+/* Section 14: Screen Choreography & Ambient HUD Life */
+@keyframes telemetry-drift-down {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(18px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes telemetry-drift-up {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-18px); }
+  100% { transform: translateY(0); }
+}
+
+.animate-telemetry-drift-left {
+  animation: telemetry-drift-down 60s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-telemetry-drift-right {
+  animation: telemetry-drift-up 60s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes ambient-sweep-pass {
+  0% {
+    transform: translateY(-10vh);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(110vh);
+    opacity: 0;
+  }
+}
+
+.animate-ambient-sweep {
+  animation: ambient-sweep-pass 1.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Flicker re-render utility */
+.hud-flicker-active {
+  opacity: 0.6 !important;
+  transition: opacity 0.04s ease-out;
+}
+
+/* Section 14.2: Directional Screen Wipe Transitions */
+@keyframes wipe-sweep-forward {
+  0% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    opacity: 0.95;
+  }
+  50% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+  }
+  100% {
+    clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%);
+    opacity: 0;
+  }
+}
+
+@keyframes wipe-sweep-backward {
+  0% {
+    clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%);
+    opacity: 0.95;
+  }
+  50% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+  }
+  100% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    opacity: 0;
+  }
+}
+
+.animate-wipe-forward {
+  animation: wipe-sweep-forward 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-wipe-backward {
+  animation: wipe-sweep-backward 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Section 14.2: Staggered Panel Boot-in */
+@keyframes hud-panel-stagger {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-panel-stagger-1 {
+  animation: hud-panel-stagger 0.28s var(--ease-reward-burst) 0ms both;
+}
+
+.animate-panel-stagger-2 {
+  animation: hud-panel-stagger 0.28s var(--ease-reward-burst) 50ms both;
+}
+
+.animate-panel-stagger-3 {
+  animation: hud-panel-stagger 0.28s var(--ease-reward-burst) 100ms both;
+}
+
+.animate-panel-stagger-4 {
+  animation: hud-panel-stagger 0.28s var(--ease-reward-burst) 150ms both;
+}
+
+/* Respect prefers-reduced-motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-glitch-confirm, .animate-screen-pulse, .animate-ambient-hero, .animate-shimmer, .animate-hud-enter, .animate-error-pulse, .animate-single-glitch, .animate-telemetry-drift-left, .animate-telemetry-drift-right, .animate-ambient-sweep, .animate-wipe-forward, .animate-wipe-backward, .animate-panel-stagger-1, .animate-panel-stagger-2, .animate-panel-stagger-3, .animate-panel-stagger-4 {
+    animation: none !important;
+  }
+}

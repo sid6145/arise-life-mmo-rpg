@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: life-rpg-api
+    runtime: node
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @life-rpg/db db:generate && pnpm --filter "@life-rpg/api..." build
+    startCommand: pnpm --filter @life-rpg/api start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false

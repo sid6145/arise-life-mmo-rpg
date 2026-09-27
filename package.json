@@ -1,0 +1,17 @@
+{
+  "name": "life-rpg",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @life-rpg/api dev\" \"pnpm --filter @life-rpg/web dev\"",
+    "start": "concurrently \"pnpm --filter @life-rpg/api start\" \"pnpm --filter @life-rpg/web start\"",
+    "build": "pnpm --filter \"@life-rpg/*\" build",
+    "db:generate": "pnpm --filter @life-rpg/db db:generate",
+    "db:migrate": "pnpm --filter @life-rpg/db db:migrate"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "pnpm@12.6.0"
+}
