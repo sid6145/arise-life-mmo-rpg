@@ -89,8 +89,7 @@ function AuthForm() {
       setGlitchSuccess(true);
 
       setTimeout(() => {
-        router.push(callbackUrl);
-        router.refresh();
+        window.location.href = callbackUrl || '/';
       }, 70);
     } catch (err) {
       console.error('Auth error:', err);

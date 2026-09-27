@@ -80,6 +80,7 @@ export default async function RootLayout({
       className={`${orbitron.variable} ${shareTechMono.variable} ${chakraPetch.variable} dark`}
     >
       <head>
+        <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
       </head>
       <body className="bg-bg-void text-slate-200 font-sans antialiased min-h-screen selection:bg-[#00f6ff] selection:text-black pb-16 md:pb-0">

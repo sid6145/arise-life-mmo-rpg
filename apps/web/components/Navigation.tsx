@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
@@ -15,6 +15,7 @@ import {
   Zap,
   Lock,
   Coins,
+  Download,
 } from 'lucide-react';
 import { soundManager } from '@/lib/sound';
 import { HudProgressBar } from '@/components/HudProgressBar';
@@ -40,6 +41,16 @@ export function Navigation({
   const isOnboarding = pathname === '/onboarding';
   const isSignIn = pathname === '/signin';
   const isLevelFlickering = useIdleFlicker('nav-player-level');
+  const [isStandalone, setIsStandalone] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const standalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true;
+      setIsStandalone(standalone);
+    }
+  }, []);
 
   const user = session?.user || initialUser;
   const isAuthenticated = status === 'authenticated' || !!user;
@@ -121,6 +132,21 @@ export function Navigation({
 
           {/* Right Cluster: User Profile & Auth Actions */}
           <div className="flex items-center gap-3">
+            {/* Install PWA Button Trigger (Visible on browsers when not installed) */}
+            {!isStandalone && (
+              <button
+                onClick={() => {
+                  soundManager.playTap();
+                  window.dispatchEvent(new CustomEvent('open-pwa-install'));
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 border border-accent-cyber-cyan/40 hover:border-accent-cyber-cyan bg-bg-panel-900 text-accent-cyber-cyan hover:text-white font-mono text-[11px] uppercase tracking-wider transition-all touch-press min-h-[36px]"
+                title="Install Life RPG HUD App"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">INSTALL HUD</span>
+              </button>
+            )}
+
             {isAuthenticated && user ? (
               <div className="flex items-center gap-3">
                 {/* User avatar & logout */}
