@@ -1,5 +1,5 @@
 import { prisma } from '@life-rpg/db';
-import type { QuestType } from '@life-rpg/types';
+import type { QuestType, GeneratedSubquest } from '@life-rpg/types';
 import { generateQuest } from './questGenerator.service';
 
 // Structural types mirroring the Prisma schema — avoids importing the `Prisma`
@@ -221,7 +221,7 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
             status: 'active',
             dueDate: endOfToday,
             subquests: {
-              create: generated.subquests.map((sq) => ({
+              create: generated.subquests.map((sq: GeneratedSubquest) => ({
                 title: sq.title,
                 xpReward: sq.xpReward,
                 completed: false,
@@ -300,7 +300,7 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
             status: 'active',
             dueDate: nextWeek,
             subquests: {
-              create: generated.subquests.map((sq) => ({
+              create: generated.subquests.map((sq: GeneratedSubquest) => ({
                 title: sq.title,
                 xpReward: sq.xpReward,
                 completed: false,
@@ -386,7 +386,7 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
             status: 'active',
             dueDate: nextMonth,
             subquests: {
-              create: generated.subquests.map((sq) => ({
+              create: generated.subquests.map((sq: GeneratedSubquest) => ({
                 title: sq.title,
                 xpReward: sq.xpReward,
                 completed: false,

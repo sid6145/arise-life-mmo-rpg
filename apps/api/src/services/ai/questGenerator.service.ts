@@ -3,6 +3,7 @@ import {
   GeneratedQuestSchema,
   GenerateQuestInput,
 } from '@life-rpg/types';
+import type { ZodIssue } from 'zod';
 import {
   createChatCompletion,
   ChatMessage,
@@ -89,7 +90,7 @@ function parseAndValidateQuest(rawContent: string): GeneratedQuest {
   const result = GeneratedQuestSchema.safeParse(parsedJson);
   if (!result.success) {
     const errorDetails = result.error.issues
-      .map((issue) => `Field '${issue.path.join('.')}': ${issue.message}`)
+      .map((issue: ZodIssue) => `Field '${issue.path.join('.')}': ${issue.message}`)
       .join('; ');
     throw new Error(`Schema validation failed: ${errorDetails}`);
   }

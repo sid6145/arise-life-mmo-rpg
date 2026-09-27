@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { prisma } from '@life-rpg/db';
+import type { GeneratedQuest, GeneratedSubquest } from '@life-rpg/types';
 import { requireAuth, AuthenticatedRequest } from '../middleware/requireAuth';
 import { generateQuest } from '../services/ai/questGenerator.service';
 
@@ -91,7 +92,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     const recentCompletionRate = player.streakCount > 0 ? 0.85 : 0.6;
 
     // 2. Generate initial daily quest with AI
-    let generatedQuest;
+    let generatedQuest: GeneratedQuest;
     try {
       generatedQuest = await generateQuest({
         goalTitle: title.trim(),
@@ -141,7 +142,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
             status: 'active',
             dueDate: tomorrow,
             subquests: {
-              create: generatedQuest.subquests.map((sq) => ({
+              create: generatedQuest.subquests.map((sq: GeneratedSubquest) => ({
                 title: sq.title,
                 xpReward: sq.xpReward,
                 completed: false,

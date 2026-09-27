@@ -37,17 +37,22 @@ router.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Response) 
 
     // Standard 6 attributes list
     const ATTRIBUTE_KEYS = ['strength', 'charisma', 'dexterity', 'intelligence', 'vitality', 'endurance'];
-    const attrMap = new Map((user.player?.attributes || []).map((a) => [a.attribute.toLowerCase(), a.points]));
+    const attrMap = new Map<string, number>(
+      (user.player?.attributes || []).map((a: { attribute: string; points: number }) => [
+        a.attribute.toLowerCase(),
+        a.points,
+      ])
+    );
 
-    const computedAttributes = ATTRIBUTE_KEYS.map((attrKey) => {
-      const points = attrMap.get(attrKey) || 0;
+    const computedAttributes = ATTRIBUTE_KEYS.map((attrKey: string) => {
+      const points: number = attrMap.get(attrKey) ?? 0;
       // Formula: Every 50 attribute points = +1 Attribute Level (Starts at Level 1 with 0 points)
       // Level = Math.floor(points / 50) + 1
       // Current level progress = points % 50
       // Points to next level = 50 - (points % 50)
-      const level = Math.floor(points / 50) + 1;
-      const progress = points % 50;
-      const pointsToNextLevel = 50 - progress;
+      const level: number = Math.floor(points / 50) + 1;
+      const progress: number = points % 50;
+      const pointsToNextLevel: number = 50 - progress;
 
       return {
         attribute: attrKey,
