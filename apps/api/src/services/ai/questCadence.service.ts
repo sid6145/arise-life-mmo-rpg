@@ -1,6 +1,7 @@
 import { prisma } from '@life-rpg/db';
 import type { QuestType, GeneratedSubquest } from '@life-rpg/types';
 import { generateQuest } from './questGenerator.service';
+import { computePeriodKey, computePeriodDueDate } from '../../utils/calendarPeriod';
 
 // Structural types mirroring the Prisma schema — avoids importing the `Prisma`
 // namespace (which lives in packages/db/node_modules) from the API package.
@@ -21,6 +22,7 @@ type QuestWithSubquests = {
   title: string;
   description: string | null;
   type: string;
+  periodKey: string | null;
   xpReward: number;
   difficulty: number;
   status: string;
@@ -67,12 +69,12 @@ type PlayerWithGoals = {
 export const EXPIRED_WEEKLY_MONTHLY_CREDIT = 1;
 
 /**
- * Ensures a player's active goals have current, calibrated quests.
- * - Daily Quests: generated daily per goal (24h cadence, 1 active per goal per day).
- * - Weekly Quests: gated on weeklyReadiness >= weeklyReadinessTarget AND lastWeeklyQuestId is null.
- * - Monthly Quests: gated on monthlyReadiness >= monthlyReadinessTarget AND lastMonthlyQuestId is null.
+ * Ensures a player's active goals have current, calibrated quests tied to exact calendar boundaries:
+ * - Daily Quests: keyed by calendar day ("YYYY-MM-DD"), expiring at 23:59:59.999 UTC.
+ * - Weekly Quests: gated on readiness, keyed by ISO week ("YYYY-Www"), expiring at Sunday 23:59:59.999 UTC.
+ * - Monthly Quests: gated on readiness, keyed by calendar month ("YYYY-MM"), expiring on the last day of month.
  */
-export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
+export async function ensureQuestsUpToDate(playerId: string, referenceDate: Date = new Date()): Promise<void> {
   try {
     const player: PlayerWithGoals | any = await prisma.player.findUnique({
       where: { id: playerId },
@@ -95,8 +97,10 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
       return;
     }
 
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const now = referenceDate;
+    const currentDailyPeriodKey = computePeriodKey(now, 'daily');
+    const currentWeeklyPeriodKey = computePeriodKey(now, 'weekly');
+    const currentMonthlyPeriodKey = computePeriodKey(now, 'monthly');
     const playerLevel: number = player.level ?? 1;
 
     // Calculate real completion rate across all past quests
@@ -162,25 +166,18 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
         expiredQuestIds.includes(q.id) ? { ...q, status: 'expired' } : q
       );
 
-      // ==========================================
-      // 1. DAILY QUEST CADENCE (Time-based daily reset)
-      // ==========================================
-      const activeDailyQuest = goalQuests.find(
+      // =========================================================================
+      // 1. DAILY QUEST CADENCE (Calendar Day Boundary via periodKey: "YYYY-MM-DD")
+      // =========================================================================
+      const currentPeriodDailyQuest = goalQuests.find(
         (q: QuestWithSubquests) =>
           q.type === 'daily' &&
-          q.status === 'active' &&
-          (!q.dueDate || new Date(q.dueDate) >= now)
+          (q.periodKey === currentDailyPeriodKey ||
+            (!q.periodKey && q.status === 'active' && (!q.dueDate || new Date(q.dueDate) >= now)))
       );
 
-      const completedTodayDailyQuest = goalQuests.find(
-        (q: QuestWithSubquests) =>
-          q.type === 'daily' &&
-          q.status === 'completed' &&
-          new Date(q.updatedAt) >= startOfToday
-      );
-
-      // Only generate if no active daily quest AND none completed today
-      if (!activeDailyQuest && !completedTodayDailyQuest) {
+      // If no quest exists for today's calendar period (whether active or completed), generate one
+      if (!currentPeriodDailyQuest) {
         let generated;
         try {
           generated = await generateQuest({
@@ -205,44 +202,49 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
           };
         }
 
-        // Due at end of today (or 24h from now)
-        const endOfToday = new Date(startOfToday);
-        endOfToday.setDate(endOfToday.getDate() + 1);
-        endOfToday.setMilliseconds(endOfToday.getMilliseconds() - 1);
+        const dailyDueDate = computePeriodDueDate(now, 'daily');
 
-        await prisma.quest.create({
-          data: {
-            goalId: goal.id,
-            title: generated.title,
-            description: generated.description,
-            type: 'daily',
-            xpReward: generated.xpReward,
-            difficulty: generated.difficulty,
-            status: 'active',
-            dueDate: endOfToday,
-            subquests: {
-              create: generated.subquests.map((sq: GeneratedSubquest) => ({
-                title: sq.title,
-                xpReward: sq.xpReward,
-                completed: false,
-              })),
+        try {
+          await prisma.quest.create({
+            data: {
+              goalId: goal.id,
+              title: generated.title,
+              description: generated.description,
+              type: 'daily',
+              periodKey: currentDailyPeriodKey,
+              xpReward: generated.xpReward,
+              difficulty: generated.difficulty,
+              status: 'active',
+              dueDate: dailyDueDate,
+              subquests: {
+                create: generated.subquests.map((sq: GeneratedSubquest) => ({
+                  title: sq.title,
+                  xpReward: sq.xpReward,
+                  completed: false,
+                })),
+              },
             },
-          },
-        });
+          });
+        } catch (err: any) {
+          // Gracefully ignore unique constraint collisions from concurrent requests at boundary moment
+          if (err?.code !== 'P2002') {
+            throw err;
+          }
+        }
       }
 
-      // ==========================================
-      // 2. WEEKLY QUEST CADENCE (Readiness Triggered)
-      // Gated on: weeklyReadiness >= weeklyReadinessTarget AND lastWeeklyQuestId is null
-      // ==========================================
-      const hasActiveWeekly =
-        Boolean(goal.lastWeeklyQuestId) ||
-        goalQuests.some(
-          (q: QuestWithSubquests) =>
-            q.type === 'weekly' &&
-            q.status === 'active' &&
-            (!q.dueDate || new Date(q.dueDate) >= now)
-        );
+      // =========================================================================
+      // 2. WEEKLY QUEST CADENCE (Readiness Triggered + ISO Week Boundary: "YYYY-Www")
+      // Gated on: weeklyReadiness >= weeklyReadinessTarget AND no active weekly quest
+      // =========================================================================
+      const activeWeeklyQuest = goalQuests.find(
+        (q: QuestWithSubquests) =>
+          q.type === 'weekly' &&
+          q.status === 'active' &&
+          (!q.dueDate || new Date(q.dueDate) >= now)
+      );
+
+      const hasActiveWeekly = Boolean(goal.lastWeeklyQuestId) || Boolean(activeWeeklyQuest);
 
       if (!hasActiveWeekly && (goal.weeklyReadiness ?? 0) >= (goal.weeklyReadinessTarget ?? 7)) {
         // Calculate actual days taken to accumulate weekly readiness
@@ -286,51 +288,57 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
           };
         }
 
-        const nextWeek = new Date(now);
-        nextWeek.setDate(nextWeek.getDate() + 7);
+        const weeklyDueDate = computePeriodDueDate(now, 'weekly');
 
-        const createdWeeklyQuest = await prisma.quest.create({
-          data: {
-            goalId: goal.id,
-            title: generated.title,
-            description: generated.description,
-            type: 'weekly',
-            xpReward: generated.xpReward,
-            difficulty: generated.difficulty,
-            status: 'active',
-            dueDate: nextWeek,
-            subquests: {
-              create: generated.subquests.map((sq: GeneratedSubquest) => ({
-                title: sq.title,
-                xpReward: sq.xpReward,
-                completed: false,
-              })),
+        try {
+          const createdWeeklyQuest = await prisma.quest.create({
+            data: {
+              goalId: goal.id,
+              title: generated.title,
+              description: generated.description,
+              type: 'weekly',
+              periodKey: currentWeeklyPeriodKey,
+              xpReward: generated.xpReward,
+              difficulty: generated.difficulty,
+              status: 'active',
+              dueDate: weeklyDueDate,
+              subquests: {
+                create: generated.subquests.map((sq: GeneratedSubquest) => ({
+                  title: sq.title,
+                  xpReward: sq.xpReward,
+                  completed: false,
+                })),
+              },
             },
-          },
-        });
+          });
 
-        // Set lastWeeklyQuestId and reset weeklyReadiness to 0 (readiness spent to trigger the challenge)
-        await prisma.goal.update({
-          where: { id: goal.id },
-          data: {
-            lastWeeklyQuestId: createdWeeklyQuest.id,
-            weeklyReadiness: 0,
-          },
-        });
+          // Set lastWeeklyQuestId and reset weeklyReadiness to 0 (readiness spent to trigger the challenge)
+          await prisma.goal.update({
+            where: { id: goal.id },
+            data: {
+              lastWeeklyQuestId: createdWeeklyQuest.id,
+              weeklyReadiness: 0,
+            },
+          });
+        } catch (err: any) {
+          if (err?.code !== 'P2002') {
+            throw err;
+          }
+        }
       }
 
-      // ==========================================
-      // 3. MONTHLY / BOSS QUEST CADENCE (Readiness Triggered)
-      // Gated on: monthlyReadiness >= monthlyReadinessTarget AND lastMonthlyQuestId is null
-      // ==========================================
-      const hasActiveMonthly =
-        Boolean(goal.lastMonthlyQuestId) ||
-        goalQuests.some(
-          (q: QuestWithSubquests) =>
-            (q.type === 'monthly' || q.type === 'boss') &&
-            q.status === 'active' &&
-            (!q.dueDate || new Date(q.dueDate) >= now)
-        );
+      // =========================================================================
+      // 3. MONTHLY / BOSS QUEST CADENCE (Readiness Triggered + Month Boundary: "YYYY-MM")
+      // Gated on: monthlyReadiness >= monthlyReadinessTarget AND no active monthly quest
+      // =========================================================================
+      const activeMonthlyQuest = goalQuests.find(
+        (q: QuestWithSubquests) =>
+          (q.type === 'monthly' || q.type === 'boss') &&
+          q.status === 'active' &&
+          (!q.dueDate || new Date(q.dueDate) >= now)
+      );
+
+      const hasActiveMonthly = Boolean(goal.lastMonthlyQuestId) || Boolean(activeMonthlyQuest);
 
       if (!hasActiveMonthly && (goal.monthlyReadiness ?? 0) >= (goal.monthlyReadinessTarget ?? 4)) {
         const pastWeeklies = goalQuests
@@ -372,41 +380,48 @@ export async function ensureQuestsUpToDate(playerId: string): Promise<void> {
           };
         }
 
-        const nextMonth = new Date(now);
-        nextMonth.setDate(nextMonth.getDate() + 30);
+        const monthlyDueDate = computePeriodDueDate(now, 'monthly');
 
-        const createdMonthlyQuest = await prisma.quest.create({
-          data: {
-            goalId: goal.id,
-            title: generated.title,
-            description: generated.description,
-            type: 'monthly',
-            xpReward: generated.xpReward,
-            difficulty: generated.difficulty,
-            status: 'active',
-            dueDate: nextMonth,
-            subquests: {
-              create: generated.subquests.map((sq: GeneratedSubquest) => ({
-                title: sq.title,
-                xpReward: sq.xpReward,
-                completed: false,
-              })),
+        try {
+          const createdMonthlyQuest = await prisma.quest.create({
+            data: {
+              goalId: goal.id,
+              title: generated.title,
+              description: generated.description,
+              type: 'monthly',
+              periodKey: currentMonthlyPeriodKey,
+              xpReward: generated.xpReward,
+              difficulty: generated.difficulty,
+              status: 'active',
+              dueDate: monthlyDueDate,
+              subquests: {
+                create: generated.subquests.map((sq: GeneratedSubquest) => ({
+                  title: sq.title,
+                  xpReward: sq.xpReward,
+                  completed: false,
+                })),
+              },
             },
-          },
-        });
+          });
 
-        // Set lastMonthlyQuestId and reset monthlyReadiness to 0
-        await prisma.goal.update({
-          where: { id: goal.id },
-          data: {
-            lastMonthlyQuestId: createdMonthlyQuest.id,
-            monthlyReadiness: 0,
-          },
-        });
+          // Set lastMonthlyQuestId and reset monthlyReadiness to 0
+          await prisma.goal.update({
+            where: { id: goal.id },
+            data: {
+              lastMonthlyQuestId: createdMonthlyQuest.id,
+              monthlyReadiness: 0,
+            },
+          });
+        } catch (err: any) {
+          if (err?.code !== 'P2002') {
+            throw err;
+          }
+        }
       }
     }
   } catch (error) {
     console.error('[questCadence] Error in ensureQuestsUpToDate:', error);
   }
 }
+
 

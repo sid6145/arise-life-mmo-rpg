@@ -111,6 +111,7 @@ model Quest {
   title       String
   description String?
   type        String     // "daily" | "weekly" | "monthly" | "boss" | "emergency"
+  periodKey   String?    // e.g. "2026-09-27" (daily), "2026-W39" (weekly), "2026-09" (monthly)
   xpReward    Int
   difficulty  Int
   status      String     @default("active") // "active" | "completed" | "skipped" | "expired"
@@ -118,6 +119,8 @@ model Quest {
   subquests   SubQuest[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  @@unique([goalId, type, periodKey])
 }
 
 model SubQuest {

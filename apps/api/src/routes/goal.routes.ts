@@ -3,6 +3,7 @@ import { prisma } from '@life-rpg/db';
 import type { GeneratedQuest, GeneratedSubquest } from '@life-rpg/types';
 import { requireAuth, AuthenticatedRequest } from '../middleware/requireAuth';
 import { generateQuest } from '../services/ai/questGenerator.service';
+import { computePeriodKey, computePeriodDueDate } from '../utils/calendarPeriod';
 
 const router: Router = Router();
 
@@ -117,10 +118,10 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       };
     }
 
-    // 3. Compute 24h due date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(23, 59, 59, 999);
+    // 3. Compute calendar boundary due date & periodKey
+    const now = new Date();
+    const dueDate = computePeriodDueDate(now, generatedQuest.type);
+    const periodKey = computePeriodKey(now, generatedQuest.type);
 
     // 4. Persist Goal + Quest + SubQuests in DB
     const createdGoal = await prisma.goal.create({
@@ -137,10 +138,11 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
             title: generatedQuest.title,
             description: generatedQuest.description,
             type: generatedQuest.type,
+            periodKey,
             xpReward: generatedQuest.xpReward,
             difficulty: generatedQuest.difficulty,
             status: 'active',
-            dueDate: tomorrow,
+            dueDate,
             subquests: {
               create: generatedQuest.subquests.map((sq: GeneratedSubquest) => ({
                 title: sq.title,
