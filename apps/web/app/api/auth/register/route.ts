@@ -62,10 +62,10 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[register error]:', error);
     return NextResponse.json(
-      { error: 'Failed to create user account' },
+      { error: error?.message || 'Failed to create user account' },
       { status: 500 }
     );
   }
