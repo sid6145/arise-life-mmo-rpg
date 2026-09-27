@@ -1,16 +1,17 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Allow public auth routes, static assets, Next internals, and api routes
+  // 1. Allow public auth routes, static assets, Next internals, offline fallback, and api routes
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/signin') ||
     pathname.startsWith('/signup') ||
-    pathname.includes('.') // static files like favicon.ico, images, etc.
+    pathname.startsWith('/~offline') ||
+    pathname.startsWith('/offline') ||
+    pathname.includes('.') // static files like favicon.ico, images, sw.js, manifest.json, etc.
   ) {
     return NextResponse.next();
   }
