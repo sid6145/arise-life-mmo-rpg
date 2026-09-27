@@ -5,7 +5,7 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'prisma', 'bcryptjs'],
     outputFileTracingIncludes: {
-      '/api/**/*': [
+      '/**/*': [
         '../../node_modules/.pnpm/@prisma+client*/**/*',
         '../../packages/db/prisma/**/*',
         './node_modules/@prisma/client/**/*',
